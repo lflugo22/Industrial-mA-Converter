@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Industrial mA Converter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f9;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        select, input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #e9f7fe;
+            border-radius: 4px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Industrial mA Converter</h1>
+        <div class="form-group">
+            <label for="maRange">Select mA Range:</label>
+            <select id="maRange">
+                <option value="4-20">4-20 mA</option>
+                <option value="0-20">0-20 mA</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label for="paramMin">Parameter Minimum:</label>
+            <input type="number" id="paramMin" placeholder="e.g., 0">
+        </div>
+        <div class="form-group">
+            <label for="paramMax">Parameter Maximum:</label>
+            <input type="number" id="paramMax" placeholder="e.g., 14">
+        </div>
+        <div class="form-group">
+            <label for="inputType">Convert:</label>
+            <select id="inputType">
+                <option value="parameter-to-ma">Parameter to mA</option>
+                <option value="ma-to-parameter">mA to Parameter</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label id="inputLabel">Parameter Value:</label>
+            <input type="number" id="inputValue" placeholder="Enter value">
+        </div>
+        <div id="result" class="result"></div>
+        <div class="form-group">
+            <canvas id="graph" width="400" height="200"></canvas>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        let chart = null;
+        
+        function convert() {
+            const maRange = document.getElementById('maRange').value;
+            const paramMin = parseFloat(document.getElementById('paramMin').value);
+            const paramMax = parseFloat(document.getElementById('paramMax').value);
+            const inputType = document.getElementById('inputType').value;
+            const inputValue = parseFloat(document.getElementById('inputValue').value);
+            
+            if (isNaN(paramMin) || isNaN(paramMax) || isNaN(inputValue)) {
+                alert('Please enter valid numbers for all fields.');
+                return;
+            }
+            
+            let maMin, maMax;
+            if (maRange === '4-20') {
+                maMin = 4;
+                maMax = 20;
+            } else {
+                maMin = 0;
+                maMax = 20;
+            }
+            
+            let result;
+            if (inputType === 'parameter-to-ma') {
+                result = (inputValue - paramMin) * (maMax - maMin) / (paramMax - paramMin) + maMin;
+                document.getElementById('result').innerHTML =
+                    `<strong>Result:</strong> ${result.toFixed(2)} mA`;
+            } else {
+                result = (inputValue - maMin) * (paramMax - paramMin) / (maMax - maMin) + paramMin;
+                document.getElementById('result').innerHTML =
+                    `<strong>Result:</strong> ${result.toFixed(2)} (parameter value)`;
+            }
+            
+            document.getElementById('result').style.display = 'block';
+            updateGraph(maMin, maMax, paramMin, paramMax);
+        }
+        
+        function updateGraph(maMin, maMax, paramMin, paramMax) {
+            console.log('updateGraph called with:', { maMin, maMax, paramMin, paramMax });
+            const ctx = document.getElementById('graph').getContext('2d');
+
+            const data = [];
+            for (let param = paramMin; param <= paramMax; param += (paramMax - paramMin) / 10) {
+                const ma = (param - paramMin) * (maMax - maMin) / (paramMax - paramMin) + maMin;
+                console.log('Calculated ma:', ma, 'for param:', param);
+                data.push({x: param, y: ma});
+            }
+            console.log('Data points:', data);
+            console.log('Data length:', data.length);
+
+            if (chart) {
+                chart.destroy();
+            }
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [{
+                        label: 'Parameter to mA',
+                        data: data,
+                        borderColor: 'rgb(75, 192, 192)',
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Parameter Value'
+                            },
+                            type: 'linear'
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'mA Value'
+                            },
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+            console.log('Chart initialized:', chart);
+        }
+        
+        document.getElementById('inputType').addEventListener('change', function() {
+            const inputLabel = document.getElementById('inputLabel');
+            if (this.value === 'parameter-to-ma') {
+                inputLabel.textContent = 'Parameter Value:';
+                document.getElementById('inputValue').placeholder = 'Enter parameter value';
+            } else {
+                inputLabel.textContent = 'mA Value:';
+                document.getElementById('inputValue').placeholder = 'Enter mA value';
+            }
+        });
+        
+        document.getElementById('inputValue').addEventListener('input', function() {
+            const maRange = document.getElementById('maRange').value;
+            const paramMin = parseFloat(document.getElementById('paramMin').value);
+            const paramMax = parseFloat(document.getElementById('paramMax').value);
+            const inputType = document.getElementById('inputType').value;
+            const inputValue = parseFloat(document.getElementById('inputValue').value);
+            
+            if (isNaN(paramMin) || isNaN(paramMax) || isNaN(inputValue)) {
+                return;
+            }
+            
+            let maMin, maMax;
+            if (maRange === '4-20') {
+                maMin = 4;
+                maMax = 20;
+            } else {
+                maMin = 0;
+                maMax = 20;
+            }
+            
+            let result;
+            if (inputType === 'parameter-to-ma') {
+                result = (inputValue - paramMin) * (maMax - maMin) / (paramMax - paramMin) + maMin;
+                document.getElementById('result').innerHTML =
+                    `<strong>Result:</strong> ${result.toFixed(2)} mA`;
+            } else {
+                result = (inputValue - maMin) * (paramMax - paramMin) / (maMax - maMin) + paramMin;
+                document.getElementById('result').innerHTML =
+                    `<strong>Result:</strong> ${result.toFixed(2)} (parameter value)`;
+            }
+            
+            document.getElementById('result').style.display = 'block';
+            updateGraph(maMin, maMax, paramMin, paramMax);
+        });
+        
+        document.getElementById('maRange').addEventListener('change', function() {
+            const maRange = document.getElementById('maRange').value;
+            const paramMin = parseFloat(document.getElementById('paramMin').value);
+            const paramMax = parseFloat(document.getElementById('paramMax').value);
+            
+            if (isNaN(paramMin) || isNaN(paramMax)) {
+                return;
+            }
+            
+            let maMin, maMax;
+            if (maRange === '4-20') {
+                maMin = 4;
+                maMax = 20;
+            } else {
+                maMin = 0;
+                maMax = 20;
+            }
+            
+            updateGraph(maMin, maMax, paramMin, paramMax);
+        });
+        
+        document.getElementById('paramMin').addEventListener('input', function() {
+            const maRange = document.getElementById('maRange').value;
+            const paramMin = parseFloat(document.getElementById('paramMin').value);
+            const paramMax = parseFloat(document.getElementById('paramMax').value);
+            
+            if (isNaN(paramMin) || isNaN(paramMax)) {
+                return;
+            }
+            
+            let maMin, maMax;
+            if (maRange === '4-20') {
+                maMin = 4;
+                maMax = 20;
+            } else {
+                maMin = 0;
+                maMax = 20;
+            }
+            
+            updateGraph(maMin, maMax, paramMin, paramMax);
+        });
+        
+        document.getElementById('paramMax').addEventListener('input', function() {
+            const maRange = document.getElementById('maRange').value;
+            const paramMin = parseFloat(document.getElementById('paramMin').value);
+            const paramMax = parseFloat(document.getElementById('paramMax').value);
+            
+            if (isNaN(paramMin) || isNaN(paramMax)) {
+                return;
+            }
+            
+            let maMin, maMax;
+            if (maRange === '4-20') {
+                maMin = 4;
+                maMax = 20;
+            } else {
+                maMin = 0;
+                maMax = 20;
+            }
+            
+            updateGraph(maMin, maMax, paramMin, paramMax);
+        });
+    </script>
+</body>
+</html>
