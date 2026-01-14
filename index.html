@@ -3,25 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Industrial mA Converter</title>
+    <title>mA Calibration & Scaler Tool</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             margin: 0;
             padding: 20px;
-            background-color: #f4f4f9;
+            background-color: #1a1a1a;
         }
         .container {
-            max-width: 600px;
+            max-width: 800px;
             margin: 0 auto;
-            background: white;
-            padding: 20px;
+            background: #2d2d2d;
             border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            overflow: hidden;
         }
         h1 {
             text-align: center;
-            color: #333;
+            color: #e0e0e0;
+            padding: 20px;
+            margin: 0;
+            background-color: #1f1f1f;
+        }
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #1a1a1a;
+            background-color: #1f1f1f;
+        }
+        .tab {
+            flex: 1;
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            background-color: #1f1f1f;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            color: #808080;
+            transition: all 0.3s;
+        }
+        .tab:hover {
+            background-color: #252525;
+            color: #b0b0b0;
+        }
+        .tab.active {
+            background-color: #2d2d2d;
+            color: #4fc3f7;
+            border-bottom: 3px solid #4fc3f7;
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+        }
+        .tab-content.active {
+            display: block;
         }
         .form-group {
             margin-bottom: 15px;
@@ -30,81 +66,322 @@
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
+            color: #b0b0b0;
         }
         select, input {
             width: 100%;
             padding: 8px;
-            border: 1px solid #ddd;
+            border: 1px solid #404040;
             border-radius: 4px;
+            box-sizing: border-box;
+            background-color: #1f1f1f;
+            color: #e0e0e0;
         }
         button {
-            background-color: #007BFF;
-            color: white;
+            background-color: #4fc3f7;
+            color: #1a1a1a;
             border: none;
             padding: 10px 15px;
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            width: 100%;
+            font-weight: bold;
         }
         button:hover {
-            background-color: #0056b3;
+            background-color: #29b6f6;
         }
         .result {
             margin-top: 20px;
-            padding: 10px;
-            background-color: #e9f7fe;
+            padding: 15px;
+            background-color: #1f3a3a;
             border-radius: 4px;
-            display: none;
+            border-left: 4px solid #4fc3f7;
+            color: #e0e0e0;
+        }
+        .result strong {
+            color: #4fc3f7;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #404040;
+            color: #e0e0e0;
+        }
+        th {
+            background-color: #1f1f1f;
+            font-weight: bold;
+        }
+        .calibration-params {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #1f1f1f;
+            border-radius: 4px;
+        }
+        .param-box {
+            text-align: center;
+        }
+        .param-box label {
+            font-size: 12px;
+            margin-bottom: 5px;
+            color: #808080;
+        }
+        .param-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4fc3f7;
+        }
+        canvas {
+            max-width: 100%;
+            margin-top: 20px;
+        }
+        .info-box {
+            background-color: #2a2a1a;
+            border-left: 4px solid #ffa726;
+            padding: 10px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+            color: #e0e0e0;
+        }
+        .info-box strong {
+            color: #ffa726;
+        }
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Industrial mA Converter</h1>
-        <div class="form-group">
-            <label for="maRange">Select mA Range:</label>
-            <select id="maRange">
-                <option value="4-20">4-20 mA</option>
-                <option value="0-20">0-20 mA</option>
-            </select>
+        <h1>mA Calibration & Scaler Tool</h1>
+        
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('calibration')">Calibration Calculator</button>
+            <button class="tab" onclick="switchTab('scaler')">mA Output Scaler</button>
         </div>
-        <div class="form-group">
-            <label for="paramMin">Parameter Minimum:</label>
-            <input type="number" id="paramMin" placeholder="e.g., 0">
+        
+        <!-- Calibration Tab -->
+        <div id="calibration" class="tab-content active">
+            <div class="info-box">
+                <strong>Output Calibration</strong><br>
+                Enter ideal and actual output values, then adjust Factor and Offset to minimize the error.
+            </div>
+            
+            <table>
+                <thead>
+                    <tr>
+                        <th>Output (Ideal)</th>
+                        <th>Actual Output</th>
+                        <th>Factor</th>
+                        <th>Offset</th>
+                        <th>Corrected Output</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><input type="number" id="output1" value="4" step="0.1"></td>
+                        <td><input type="number" id="actual1" value="4.5" step="0.01"></td>
+                        <td rowspan="2"><input type="number" id="factor" value="1.01" step="0.01"></td>
+                        <td rowspan="2"><input type="number" id="offset" value="-0.5" step="0.1"></td>
+                        <td id="corrected1">4.045</td>
+                    </tr>
+                    <tr>
+                        <td><input type="number" id="output2" value="20" step="0.1"></td>
+                        <td><input type="number" id="actual2" value="20.3" step="0.01"></td>
+                        <td id="corrected2">20.003</td>
+                    </tr>
+                </tbody>
+            </table>
+            
+            <div class="calibration-params">
+                <div class="param-box">
+                    <label>Factor</label>
+                    <div class="param-value" id="factorDisplay">1.01</div>
+                </div>
+                <div class="param-box">
+                    <label>Offset</label>
+                    <div class="param-value" id="offsetDisplay">-0.5</div>
+                </div>
+                <div class="param-box">
+                    <label>Slope</label>
+                    <div class="param-value" id="slopeDisplay">0.9875</div>
+                </div>
+            </div>
+            
+            <canvas id="calibrationGraph" width="400" height="300"></canvas>
         </div>
-        <div class="form-group">
-            <label for="paramMax">Parameter Maximum:</label>
-            <input type="number" id="paramMax" placeholder="e.g., 14">
-        </div>
-        <div class="form-group">
-            <label for="inputType">Convert:</label>
-            <select id="inputType">
-                <option value="parameter-to-ma">Parameter to mA</option>
-                <option value="ma-to-parameter">mA to Parameter</option>
-            </select>
-        </div>
-        <div class="form-group">
-            <label id="inputLabel">Parameter Value:</label>
-            <input type="number" id="inputValue" placeholder="Enter value">
-        </div>
-        <div id="result" class="result"></div>
-        <div class="form-group">
-            <canvas id="graph" width="400" height="200"></canvas>
+        
+        <!-- mA Scaler Tab -->
+        <div id="scaler" class="tab-content">
+            <div class="info-box">
+                <strong>Parameter to mA Conversion</strong><br>
+                Convert between process parameters and mA output signals. Calibration factors are automatically applied.
+            </div>
+            
+            <div class="form-group">
+                <label for="maRange">mA Range:</label>
+                <select id="maRange">
+                    <option value="4-20">4-20 mA</option>
+                    <option value="0-20">0-20 mA</option>
+                </select>
+            </div>
+            
+            <div class="two-column">
+                <div class="form-group">
+                    <label for="paramMin">Parameter Minimum:</label>
+                    <input type="number" id="paramMin" placeholder="e.g., 0" step="any">
+                </div>
+                <div class="form-group">
+                    <label for="paramMax">Parameter Maximum:</label>
+                    <input type="number" id="paramMax" placeholder="e.g., 14" step="any">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="inputType">Convert:</label>
+                <select id="inputType">
+                    <option value="parameter-to-ma">Parameter to mA</option>
+                    <option value="ma-to-parameter">mA to Parameter</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label id="inputLabel">Parameter Value:</label>
+                <input type="number" id="inputValue" placeholder="Enter value" step="any">
+            </div>
+            
+            <div id="scalerResult" class="result" style="display: none;"></div>
+            
+            <canvas id="scalerGraph" width="400" height="300"></canvas>
         </div>
     </div>
+    
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
-        let chart = null;
+        let calibrationChart = null;
+        let scalerChart = null;
         
-        function convert() {
+        // Tab switching
+        function switchTab(tabName) {
+            const tabs = document.querySelectorAll('.tab');
+            const contents = document.querySelectorAll('.tab-content');
+            
+            tabs.forEach(tab => tab.classList.remove('active'));
+            contents.forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tabName).classList.add('active');
+            
+            if (tabName === 'scaler') {
+                updateScaler();
+            }
+        }
+        
+        // Calibration Calculator Functions
+        function updateCalibration() {
+            const output1 = parseFloat(document.getElementById('output1').value);
+            const output2 = parseFloat(document.getElementById('output2').value);
+            const actual1 = parseFloat(document.getElementById('actual1').value);
+            const actual2 = parseFloat(document.getElementById('actual2').value);
+            const factor = parseFloat(document.getElementById('factor').value);
+            const offset = parseFloat(document.getElementById('offset').value);
+            
+            if (isNaN(output1) || isNaN(output2) || isNaN(actual1) || isNaN(actual2) || isNaN(factor) || isNaN(offset)) {
+                return;
+            }
+            
+            // Calculate corrected outputs
+            const corrected1 = actual1 * factor + offset;
+            const corrected2 = actual2 * factor + offset;
+            
+            document.getElementById('corrected1').textContent = corrected1.toFixed(3);
+            document.getElementById('corrected2').textContent = corrected2.toFixed(3);
+            
+            // Calculate slope
+            const slope = (actual2 - actual1) / (output2 - output1);
+            
+            // Update displays
+            document.getElementById('factorDisplay').textContent = factor.toFixed(2);
+            document.getElementById('offsetDisplay').textContent = offset.toFixed(2);
+            document.getElementById('slopeDisplay').textContent = slope.toFixed(4);
+            
+            updateCalibrationGraph(output1, output2, actual1, actual2, corrected1, corrected2);
+        }
+        
+        function updateCalibrationGraph(output1, output2, actual1, actual2, corrected1, corrected2) {
+            const ctx = document.getElementById('calibrationGraph').getContext('2d');
+            
+            if (calibrationChart) {
+                calibrationChart.destroy();
+            }
+            
+            calibrationChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    datasets: [
+                        {
+                            label: 'Ideal Output',
+                            data: [{x: output1, y: output1}, {x: output2, y: output2}],
+                            borderColor: 'rgb(75, 192, 192)',
+                            backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                            tension: 0
+                        },
+                        {
+                            label: 'Actual Output',
+                            data: [{x: output1, y: actual1}, {x: output2, y: actual2}],
+                            borderColor: 'rgb(255, 99, 132)',
+                            backgroundColor: 'rgba(255, 99, 132, 0.1)',
+                            tension: 0
+                        },
+                        {
+                            label: 'Corrected Output',
+                            data: [{x: output1, y: corrected1}, {x: output2, y: corrected2}],
+                            borderColor: 'rgb(255, 205, 86)',
+                            backgroundColor: 'rgba(255, 205, 86, 0.1)',
+                            tension: 0
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Output (mA)'
+                            },
+                            type: 'linear'
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Value (mA)'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // mA Scaler Functions
+        function updateScaler() {
             const maRange = document.getElementById('maRange').value;
             const paramMin = parseFloat(document.getElementById('paramMin').value);
             const paramMax = parseFloat(document.getElementById('paramMax').value);
             const inputType = document.getElementById('inputType').value;
             const inputValue = parseFloat(document.getElementById('inputValue').value);
             
-            if (isNaN(paramMin) || isNaN(paramMax) || isNaN(inputValue)) {
-                alert('Please enter valid numbers for all fields.');
+            if (isNaN(paramMin) || isNaN(paramMax)) {
                 return;
             }
             
@@ -117,45 +394,56 @@
                 maMax = 20;
             }
             
-            let result;
-            if (inputType === 'parameter-to-ma') {
-                result = (inputValue - paramMin) * (maMax - maMin) / (paramMax - paramMin) + maMin;
-                document.getElementById('result').innerHTML =
-                    `<strong>Result:</strong> ${result.toFixed(2)} mA`;
-            } else {
-                result = (inputValue - maMin) * (paramMax - paramMin) / (maMax - maMin) + paramMin;
-                document.getElementById('result').innerHTML =
-                    `<strong>Result:</strong> ${result.toFixed(2)} (parameter value)`;
+            // Get calibration factors
+            const factor = parseFloat(document.getElementById('factor').value) || 1;
+            const offset = parseFloat(document.getElementById('offset').value) || 0;
+            
+            if (!isNaN(inputValue)) {
+                let result;
+                if (inputType === 'parameter-to-ma') {
+                    // Calculate ideal mA
+                    const idealMa = (inputValue - paramMin) * (maMax - maMin) / (paramMax - paramMin) + maMin;
+                    // The corrected output is what we display (this is the ideal/target value)
+                    
+                    document.getElementById('scalerResult').innerHTML =
+                        `<strong>Result:</strong> ${idealMa.toFixed(3)} mA (corrected output)`;
+                } else {
+                    // User enters mA reading, convert to parameter
+                    result = (inputValue - maMin) * (paramMax - paramMin) / (maMax - maMin) + paramMin;
+                    
+                    document.getElementById('scalerResult').innerHTML =
+                        `<strong>Result:</strong> ${result.toFixed(3)} (parameter value)`;
+                }
+                
+                document.getElementById('scalerResult').style.display = 'block';
             }
             
-            document.getElementById('result').style.display = 'block';
-            updateGraph(maMin, maMax, paramMin, paramMax);
+            updateScalerGraph(maMin, maMax, paramMin, paramMax, factor, offset);
         }
         
-        function updateGraph(maMin, maMax, paramMin, paramMax) {
-            console.log('updateGraph called with:', { maMin, maMax, paramMin, paramMax });
-            const ctx = document.getElementById('graph').getContext('2d');
-
+        function updateScalerGraph(maMin, maMax, paramMin, paramMax, factor, offset) {
+            const ctx = document.getElementById('scalerGraph').getContext('2d');
+            
             const data = [];
-            for (let param = paramMin; param <= paramMax; param += (paramMax - paramMin) / 10) {
-                const ma = (param - paramMin) * (maMax - maMin) / (paramMax - paramMin) + maMin;
-                console.log('Calculated ma:', ma, 'for param:', param);
-                data.push({x: param, y: ma});
+            const steps = 20;
+            for (let i = 0; i <= steps; i++) {
+                const param = paramMin + (paramMax - paramMin) * i / steps;
+                const correctedMa = (param - paramMin) * (maMax - maMin) / (paramMax - paramMin) + maMin;
+                data.push({x: param, y: correctedMa});
             }
-            console.log('Data points:', data);
-            console.log('Data length:', data.length);
-
-            if (chart) {
-                chart.destroy();
+            
+            if (scalerChart) {
+                scalerChart.destroy();
             }
-
-            chart = new Chart(ctx, {
+            
+            scalerChart = new Chart(ctx, {
                 type: 'line',
                 data: {
                     datasets: [{
-                        label: 'Parameter to mA',
+                        label: 'Parameter to Corrected mA Output',
                         data: data,
-                        borderColor: 'rgb(75, 192, 192)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        backgroundColor: 'rgba(54, 162, 235, 0.1)',
                         tension: 0.1
                     }]
                 },
@@ -172,16 +460,20 @@
                         y: {
                             title: {
                                 display: true,
-                                text: 'mA Value'
-                            },
-                            beginAtZero: false
+                                text: 'Corrected mA Output'
+                            }
                         }
                     }
                 }
             });
-            console.log('Chart initialized:', chart);
         }
         
+        // Event Listeners for Calibration
+        ['output1', 'output2', 'actual1', 'actual2', 'factor', 'offset'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateCalibration);
+        });
+        
+        // Event Listeners for Scaler
         document.getElementById('inputType').addEventListener('change', function() {
             const inputLabel = document.getElementById('inputLabel');
             if (this.value === 'parameter-to-ma') {
@@ -191,105 +483,15 @@
                 inputLabel.textContent = 'mA Value:';
                 document.getElementById('inputValue').placeholder = 'Enter mA value';
             }
+            updateScaler();
         });
         
-        document.getElementById('inputValue').addEventListener('input', function() {
-            const maRange = document.getElementById('maRange').value;
-            const paramMin = parseFloat(document.getElementById('paramMin').value);
-            const paramMax = parseFloat(document.getElementById('paramMax').value);
-            const inputType = document.getElementById('inputType').value;
-            const inputValue = parseFloat(document.getElementById('inputValue').value);
-            
-            if (isNaN(paramMin) || isNaN(paramMax) || isNaN(inputValue)) {
-                return;
-            }
-            
-            let maMin, maMax;
-            if (maRange === '4-20') {
-                maMin = 4;
-                maMax = 20;
-            } else {
-                maMin = 0;
-                maMax = 20;
-            }
-            
-            let result;
-            if (inputType === 'parameter-to-ma') {
-                result = (inputValue - paramMin) * (maMax - maMin) / (paramMax - paramMin) + maMin;
-                document.getElementById('result').innerHTML =
-                    `<strong>Result:</strong> ${result.toFixed(2)} mA`;
-            } else {
-                result = (inputValue - maMin) * (paramMax - paramMin) / (maMax - maMin) + paramMin;
-                document.getElementById('result').innerHTML =
-                    `<strong>Result:</strong> ${result.toFixed(2)} (parameter value)`;
-            }
-            
-            document.getElementById('result').style.display = 'block';
-            updateGraph(maMin, maMax, paramMin, paramMax);
+        ['maRange', 'paramMin', 'paramMax', 'inputValue'].forEach(id => {
+            document.getElementById(id).addEventListener('input', updateScaler);
         });
         
-        document.getElementById('maRange').addEventListener('change', function() {
-            const maRange = document.getElementById('maRange').value;
-            const paramMin = parseFloat(document.getElementById('paramMin').value);
-            const paramMax = parseFloat(document.getElementById('paramMax').value);
-            
-            if (isNaN(paramMin) || isNaN(paramMax)) {
-                return;
-            }
-            
-            let maMin, maMax;
-            if (maRange === '4-20') {
-                maMin = 4;
-                maMax = 20;
-            } else {
-                maMin = 0;
-                maMax = 20;
-            }
-            
-            updateGraph(maMin, maMax, paramMin, paramMax);
-        });
-        
-        document.getElementById('paramMin').addEventListener('input', function() {
-            const maRange = document.getElementById('maRange').value;
-            const paramMin = parseFloat(document.getElementById('paramMin').value);
-            const paramMax = parseFloat(document.getElementById('paramMax').value);
-            
-            if (isNaN(paramMin) || isNaN(paramMax)) {
-                return;
-            }
-            
-            let maMin, maMax;
-            if (maRange === '4-20') {
-                maMin = 4;
-                maMax = 20;
-            } else {
-                maMin = 0;
-                maMax = 20;
-            }
-            
-            updateGraph(maMin, maMax, paramMin, paramMax);
-        });
-        
-        document.getElementById('paramMax').addEventListener('input', function() {
-            const maRange = document.getElementById('maRange').value;
-            const paramMin = parseFloat(document.getElementById('paramMin').value);
-            const paramMax = parseFloat(document.getElementById('paramMax').value);
-            
-            if (isNaN(paramMin) || isNaN(paramMax)) {
-                return;
-            }
-            
-            let maMin, maMax;
-            if (maRange === '4-20') {
-                maMin = 4;
-                maMax = 20;
-            } else {
-                maMin = 0;
-                maMax = 20;
-            }
-            
-            updateGraph(maMin, maMax, paramMin, paramMax);
-        });
+        // Initialize
+        updateCalibration();
     </script>
 </body>
 </html>
