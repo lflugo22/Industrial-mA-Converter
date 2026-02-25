@@ -1,0 +1,12 @@
+/**
+ * Container Component Styles
+ */
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-container);
+  overflow: hidden;
+}

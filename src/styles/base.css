@@ -1,0 +1,36 @@
+/**
+ * Base Styles
+ * Reset and foundational styles
+ */
+
+@import './variables.css';
+
+/* Reset */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* Base Element Styles */
+body {
+  font-family: var(--font-family);
+  margin: 0;
+  padding: var(--spacing-lg);
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+
+h1 {
+  text-align: center;
+  color: var(--color-text-primary);
+  padding: var(--spacing-lg);
+  margin: 0;
+  background-color: var(--color-bg-tertiary);
+}
+
+canvas {
+  max-width: 100%;
+  margin-top: var(--spacing-lg);
+}
