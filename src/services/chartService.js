@@ -67,7 +67,7 @@ export class ChartService {
             tension: 0
           },
           {
-            label: 'Corrected Output',
+            label: 'Adjusted Output',
             data: [
               { x: output1, y: corrected1 },
               { x: output2, y: corrected2 }
@@ -121,7 +121,7 @@ export class ChartService {
       type: 'line',
       data: {
         datasets: [{
-          label: 'Parameter to Corrected mA Output',
+          label: 'Parameter to Adjusted mA Output',
           data: dataPoints,
           borderColor: CHART_COLORS.scaler.border,
           backgroundColor: CHART_COLORS.scaler.background,
@@ -141,7 +141,7 @@ export class ChartService {
           y: {
             title: {
               display: true,
-              text: 'Corrected mA Output'
+              text: 'Adjusted mA Output'
             }
           }
         }
